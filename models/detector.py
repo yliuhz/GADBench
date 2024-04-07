@@ -65,18 +65,32 @@ class BaseGNNDetector(BaseDetector):
     def train(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.model_config['lr'])
         train_labels, val_labels, test_labels = self.labels[self.train_mask], self.labels[self.val_mask], self.labels[self.test_mask]
+
+        peak_cpu_usage, peak_gpu_usage = 0.0, 0.0
         for e in range(self.train_config['epochs']):
             self.model.train()
             logits = self.model(self.train_graph)
             loss = F.cross_entropy(logits[self.train_graph.ndata['train_mask']], train_labels,
                                    weight=torch.tensor([1., self.weight], device=self.labels.device))
+            
+            
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            # The following code is used to record the memory usage
+            # # The following code is used to record the memory usage
             # py_process = psutil.Process(os.getpid())
             # print(f"CPU Memory Usage: {py_process.memory_info().rss / (1024 ** 3)} GB")
             # print(f"GPU Memory Usage: {torch.cuda.memory_reserved() / (1024 ** 3)} GB")
+            py_process = psutil.Process(os.getpid())
+            cpu_usage = py_process.memory_info().rss / (1024 ** 3)
+            gpu_usage = torch.cuda.memory_reserved() / (1024 ** 3)
+
+            if cpu_usage > peak_cpu_usage:
+                peak_cpu_usage = cpu_usage
+            if gpu_usage > peak_gpu_usage:
+                peak_gpu_usage = gpu_usage
+            
+            
             if self.model_config['drop_rate'] > 0 or self.train_config['inductive']:
                 self.model.eval()
                 logits = self.model(self.val_graph)
@@ -96,6 +110,12 @@ class BaseGNNDetector(BaseDetector):
                 self.patience_knt += 1
                 if self.patience_knt > self.train_config['patience']:
                     break
+
+        print(f"CPU Memory Usage: {peak_cpu_usage} GB")
+        print(f"GPU Memory Usage: {peak_gpu_usage} GB")
+
+        # if return_memory_usage:
+        #     return test_score, peak_cpu_usage, peak_gpu_usage
         return test_score
 
 # RGCN, HGT

@@ -1,5 +1,8 @@
 __pycache__/
+.ipynb_checkpoints/
+
 datasets/
 modes/__pycache__/
 catboost_info/
 results/
+logs/
