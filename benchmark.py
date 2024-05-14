@@ -26,7 +26,11 @@ parser.add_argument('--semi_supervised', type=int, default=0)
 parser.add_argument('--inductive', type=int, default=0)
 parser.add_argument('--models', type=str, default=None)
 parser.add_argument('--datasets', type=str, default=None)
+parser.add_argument('--downfeat', type=float, default=None)
+parser.add_argument('--downedge', type=float, default=None)
 args = parser.parse_args()
+
+assert args.downfeat is None or args.downedge is None
 
 columns = ['name']
 new_row = {}
@@ -76,6 +80,10 @@ for model in models:
             'inductive': bool(args.inductive)
         }
         data = Dataset(dataset_name)
+        if args.downfeat is not None:
+            data.downsample_feat(args.downfeat)
+        if args.downedge is not None:
+            data.downsample_edges(args.downedge)
         model_config = {'model': model, 'lr': 0.01, 'drop_rate': 0}
         if dataset_name == 'tsocial':
             model_config['h_feats'] = 16

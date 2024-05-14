@@ -3,6 +3,8 @@ from models.detector import *
 from dgl.data.utils import load_graphs
 import os
 import json
+import numpy as np
+from dgl import DropEdge
 
 
 class Dataset:
@@ -18,6 +20,39 @@ class Dataset:
         self.graph.ndata['val_mask'] = self.graph.ndata['val_masks'][:,trial_id]
         self.graph.ndata['test_mask'] = self.graph.ndata['test_masks'][:,trial_id]
         print(self.graph.ndata['train_mask'].sum(), self.graph.ndata['val_mask'].sum(), self.graph.ndata['test_mask'].sum())
+
+    def downsample_feat(self, rate=0.1):
+        '''
+        rate: drop_rate
+        '''
+        n, d = self.graph.ndata['feature'].shape
+        idx = np.random.permutation(d)
+        st = int(d*rate)
+        idx = idx[st:]
+        self.graph.ndata['feature'] = self.graph.ndata['feature'][:, idx]
+
+        print(f"Dropped: {d-self.graph.ndata['feature'].shape[1]} ({1-self.graph.ndata['feature'].shape[1]/d:.3f})")
+
+
+    def downsample_edges(self, rate=0.1):
+        '''
+        rate: drop_rate
+        '''
+        transform = DropEdge(p=rate)
+        new_graph = transform(self.graph)
+        print(f"Dropped: {self.graph.number_of_edges()-new_graph.number_of_edges()} ({1-new_graph.number_of_edges()/self.graph.number_of_edges():.3f})")
+        
+        self.graph = new_graph
+
+        
+
+
+
+    def manual_aggregate_feat(self):
+
+        n, d = self.graph.ndata['feature'].shape
+
+        raise NotImplementedError()
 
 
 model_detector_dict = {
